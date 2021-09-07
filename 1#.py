@@ -183,6 +183,8 @@ def convert_shape_format(shape):
     for i, pos in enumerate(positions):
         positions[i] = (pos[0] - 2, pos[1] - 4)
 
+    return positions
+
 
 def valid_space(shape, grid):
     accepted_pos = [[(j, i) for j in range(10) if grid[i][j] == (0, 0, 0)] for i in range(20)]
@@ -233,11 +235,42 @@ def draw_grid(surface, grid):
 
 
 def clear_rows(grid, locked):
-    pass
+    inc = 0
+    for i in range(len(grid)-1, -1, -1):
+        row = grid[i]
+        if (0, 0, 0) not in row:
+            inc += 1
+            ind = i
+            for j in range(len(row)):
+                try:
+                    del locked[(j, i)]
+                except:
+                    continue
+
+    if inc > 0:
+        for key in sorted(list(locked), key=lambda x: x[1])[::-1]:
+            x, y = key
+            if y < ind:
+                newKey = (x, y + inc)
+                locked[newKey] = locked.pop(key)
 
 
 def draw_next_shape(shape, surface):
-    pass
+    font = pygame.font.SysFont('comicsans', 30)
+    label = font.render('Next Shape', 1, (255, 255, 255))
+
+    sx = top_left_x + play_width + 50
+    sy = top_left_y + play_height / 2 - 100
+    format = shape.shape[shape.rotation % len(shape.shape)]
+
+    for i, line in enumerate(format):
+        row = list(line)
+        for j, column in enumerate(row):
+            if column == '0':
+                pygame.draw.rect(surface, shape.color,
+                                 (sx + j * block_size, sy + i * block_size, block_size, block_size), 0)
+
+    surface.blit(label, (sx + 10, sy - 30))
 
 
 def draw_window(surface, grid):
@@ -260,7 +293,7 @@ def draw_window(surface, grid):
     # around the tetris grid
 
     draw_grid(surface, grid)
-    pygame.display.update()  # Updates the screen
+    # pygame.display.update()  # Updates the screen
 
 
 def main(win):
@@ -301,11 +334,11 @@ def main(win):
                     current_piece.x -= 1
                     if not (valid_space(current_piece, grid)):  # Checks if the movement is valid and moves it back to
                         # where it was if it's not
-                        current_piece += 1
+                        current_piece.x += 1
                 if event.key == pygame.K_RIGHT:  # Moves the piece right
                     current_piece.x += 1
                     if not (valid_space(current_piece, grid)):
-                        current_piece -= 1
+                        current_piece.x -= 1
                 if event.key == pygame.K_DOWN:  # Moves the piece down
                     current_piece.y += 1
                     if not (valid_space(current_piece, grid)):
@@ -313,7 +346,7 @@ def main(win):
                 if event.key == pygame.K_UP:  # Rotates the piece
                     current_piece.rotation += 1
                     if not (valid_space(current_piece, grid)):
-                        current_piece -= 1
+                        current_piece.rotation -= 1
 
         shape_pos = convert_shape_format(current_piece)
 
@@ -332,8 +365,11 @@ def main(win):
             next_piece = get_shape()  # Creates the new next piece with a random one
             change_piece = False  # Stops creating a new piece by setting change piece to false because the current
             # piece and next piece have been updated
+            clear_rows(grid, locked_positions)
 
         draw_window(win, grid)
+        draw_next_shape(next_piece, win)
+        pygame.display.update()
 
         # Checks if the game is lost, quits if it is
         if check_lost(locked_positions):
