@@ -172,30 +172,36 @@ def convert_shape_format(shape):
     positions = []
     format = shape.shape[shape.rotation % len(shape.shape)]
 
-    for i, line in enumerate(format):
+    for i, line in enumerate(format):  # loops through each line
         row = list(line)
-        for j, column in enumerate(row):
+        for j, column in enumerate(row):  # loops through the line looking for full stops or zeros
             if column == '0':
-                positions.append((shape.x + j, shape.y + i))
+                positions.append((shape.x + j, shape.y + i))  # Adds the column and rows to the shapes current position,
+                # to move the shape down the screen, instead of being stuck in the position it's in, in the list
 
+    # Offsets the shape two columns left and four rows up to ignore the full stops in the list
     for i, pos in enumerate(positions):
         positions[i] = (pos[0] - 2, pos[1] - 4)
 
 
 def valid_space(shape, grid):
     accepted_pos = [[(j, i) for j in range(10) if grid[i][j] == (0, 0, 0)] for i in range(20)]
-    accepted_pos = [j for sub in accepted_pos for j in sub]
+    accepted_pos = [j for sub in accepted_pos for j in sub]  # Converts two dimensional list into a one dimensional list
 
     formatted = convert_shape_format(shape)
 
+    # The shapes begin falling before they're seen on screen, this loop checks once the shape is visible on screen,
+    # whether or not it's in an accepted position. If the loop wasn't made, it would return false when the shape is
+    # falling whilst hidden
     for pos in formatted:
         if pos not in accepted_pos:
             if pos[1] > -1:
                 return False
-    return True
+    return True  # if it makes it through the loop the position is accepted and it returns True
 
 
 def check_lost(positions):
+    # Checks whether the block is above the screen and if it is the game is lost
     for pos in positions:
         x, y = pos
         if y < 1:
@@ -212,15 +218,18 @@ def draw_text_middle(text, size, color, surface):
     pass
 
 
+# Draws the grid
 def draw_grid(surface, grid):
     sx = top_left_x
     sy = top_left_y
 
     for i in range(len(grid)):
         pygame.draw.line(surface, (128, 128, 128), (sx, sy + i * block_size), (sx + play_width, sy + i * block_size))
+        # Draws 20 vertical lines
         for j in range(len(grid[i])):
             pygame.draw.line(surface, (128, 128, 128), (sx + j * block_size, sy),
                              (sx + j * block_size, sy + play_height))
+            # Draws 10 horizontal lines
 
 
 def clear_rows(grid, locked):
@@ -243,7 +252,6 @@ def draw_window(surface, grid):
 
     for i in range(len(grid)):  # Loops through the grid to get the colours of the blocks in the grid
         for j in range(len(grid[i])):
-
             # Draws the grid
             pygame.draw.rect(surface, grid[i][j],
                              (top_left_x + j * block_size, top_left_y + i * block_size, block_size, block_size), 0)
@@ -263,15 +271,20 @@ def main(win):
     run = True  # For the while loop of the game
     current_piece = get_shape()  # Sets the current piece
     next_piece = get_shape()  # Sets the next piece
-    clock = pygame.time.Clock()  #
-    fall_time = 0
-    fall_speed = 0.27
+    clock = pygame.time.Clock()  # Initializes the gameclock
+    fall_time = 0  # Variable for the fall time
+    fall_speed = 0.27  # Variable for fall speed
 
     while run:
-        grid = create_grid(locked_positions)
-        fall_time += clock.get_rawtime()
-        clock.tick()
+        grid = create_grid(locked_positions)  # Creates a grid because every time a piece is moved, there is an
+        # opportunity to create new locked positions
+        fall_time += clock.get_rawtime()  # Initializes the clock to count the fall time of the piece
+        clock.tick()  # Starts the clock
 
+        # After one second has passed this will move the piece down one, check whether it has hit an invalid space
+        # (either the bottom or another piece), if it has it will move the piece into the last valid position and load
+        # in a new piece
+        # Only checks vertical valid spaces
         if fall_time / 1000 > fall_speed:
             fall_time = 0
             current_piece.y += 1
@@ -312,13 +325,17 @@ def main(win):
         if change_piece:
             for pos in shape_pos:
                 p = (pos[0], pos[1])
+                # Locked positions is a dictionary containing the position of the piece as well as the colour of the
+                # piece
                 locked_positions[p] = current_piece.color
-            current_piece = next_piece
-            next_piece = get_shape()
-            change_piece = False
+            current_piece = next_piece  # Replaces the old piece with the new piece
+            next_piece = get_shape()  # Creates the new next piece with a random one
+            change_piece = False  # Stops creating a new piece by setting change piece to false because the current
+            # piece and next piece have been updated
 
         draw_window(win, grid)
 
+        # Checks if the game is lost, quits if it is
         if check_lost(locked_positions):
             run = False
     pygame.display.quit()
